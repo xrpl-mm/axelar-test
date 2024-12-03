@@ -1,0 +1,21 @@
+{
+  "name": "axelar-test",
+  "version": "1.0.0",
+  "description": "**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "9oelM",
+  "license": "ISC",
+  "dependencies": {
+    "@types/ethereumjs-abi": "^0.6.5",
+    "ethereumjs-abi": "^0.6.8",
+    "ethers": "^6.13.4",
+    "xrpl": "^4.0.0"
+  }
+}
