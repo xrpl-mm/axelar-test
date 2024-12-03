@@ -13,7 +13,7 @@ contract CounterScript is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        simpleStuff = new SimpleStuff();
+        simpleStuff = new SimpleStuff(address(0x43F2ccD4E27099b5F580895b44eAcC866e5F7Bb1));
 
         vm.stopBroadcast();
     }

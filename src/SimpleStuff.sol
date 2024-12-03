@@ -17,7 +17,7 @@ contract SimpleStuff is InterchainTokenExecutable {
     event DecodedData(bytes destinationAddress, string message);
 
     uint256 public number;
-    string immutable DESTINATION_CHAIN = "xrpl";
+    string constant DESTINATION_CHAIN = "xrpl";
 
     constructor(address _interchainTokenService) InterchainTokenExecutable(_interchainTokenService) {}
 
@@ -47,8 +47,8 @@ contract SimpleStuff is InterchainTokenExecutable {
         (bytes memory destinationAddress, string memory message) = abi.decode(data, (bytes, string));
 
         emit DecodedData(destinationAddress, message);
-
-        bytes memory replyData = abi.encodePacked(0x1234, "reply");
+        bytes memory num = abi.encodePacked(uint16(0x1234));
+        bytes memory replyData = abi.encodePacked(num, "reply");
 
         InterchainTokenService(interchainTokenService).callContractWithInterchainToken(
             tokenId,
