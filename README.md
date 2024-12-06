@@ -2,6 +2,7 @@
 
 - latest deployment extending InterchainTokenExecutable: https://explorer.xrplevm.org/address/0x7b1bf875977e4124dc781153bd6393c8e1c22739
 - latest deployment extending AxelarExecutable: https://explorer.xrplevm.org/address/0x2bd071fce9eb7f51333b002ea4adcbe61d9322a9
+- latest deployment extending AxelarExecutableWithToken: https://explorer.xrplevm.org/address/0xc98869883ef7144d4cc84b3cc4b403cccd781a63
 
 Test sending a tx from XRPL to EVM, and then back from EVM to XRPL:
 
