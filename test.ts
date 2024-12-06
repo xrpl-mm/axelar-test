@@ -3,12 +3,14 @@ import abi from "ethereumjs-abi";
 import { ethers } from "ethers";
 
 async function run() {
-  const SECRET = `sEdVdbXLvuGnkqwjQxgVCH3Mo1i47y3`;
+  // Can always get a new one from https://xrpl.org/resources/dev-tools/xrp-faucets
+  const SECRET = `sEdVcMacmexci3aaP8omKdgjSPUmmde`;
   const DESTINATION_CHAIN = "xrpl-evm-sidechain";
+  // https://explorer.xrplevm.org/address/0x7b1bf875977e4124dc781153bd6393c8e1c22739
   const DESTINATION_EVM_ADDRESS = `7b1bf875977e4124dc781153bd6393c8e1c22739`;
   const MULTISIG = `rP9iHnCmJcVPtzCwYJjU1fryC2pEcVqDHv`;
-  const AMOUNT = xrpl.xrpToDrops("2.2");
-  const RPC_URL = "wss://s.altnet.rippletest.net:51233";
+  const AMOUNT = xrpl.xrpToDrops("2.4");
+  const RPC_URL = "wss://s.devnet.rippletest.net:51233";
 
   const xrplWallet = xrpl.Wallet.fromSeed(SECRET);
 
@@ -18,7 +20,7 @@ async function run() {
 
   const payloadData = abi.rawEncode(
     ["bytes", "string"],
-    ["0x1234", "testing_bro"],
+    ["0x1234", "bb"],
   );
 
   // const wrappedPayloadHash = abi.rawEncode(
