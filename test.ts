@@ -7,7 +7,9 @@ async function run() {
   const SECRET = `sEdVcMacmexci3aaP8omKdgjSPUmmde`;
   const DESTINATION_CHAIN = "xrpl-evm-sidechain";
   // https://explorer.xrplevm.org/address/0x7b1bf875977e4124dc781153bd6393c8e1c22739
-  const DESTINATION_EVM_ADDRESS = `7b1bf875977e4124dc781153bd6393c8e1c22739`;
+  const DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE = `7b1bf875977e4124dc781153bd6393c8e1c22739`;
+  // https://explorer.xrplevm.org/address/0x2bd071fce9eb7f51333b002ea4adcbe61d9322a9
+  const DESTINATION_EVM_ADDRESS_AXELAR_EXECUTABLE = `2bd071fce9eb7f51333b002ea4adcbe61d9322a9`;
   const MULTISIG = `rP9iHnCmJcVPtzCwYJjU1fryC2pEcVqDHv`;
   const AMOUNT = xrpl.xrpToDrops("2.4");
   const RPC_URL = "wss://s.devnet.rippletest.net:51233";
@@ -39,7 +41,7 @@ async function run() {
     Memos: [
       {
         Memo: {
-          MemoData: DESTINATION_EVM_ADDRESS,
+          MemoData: DESTINATION_EVM_ADDRESS_AXELAR_EXECUTABLE,
           MemoType: Buffer.from("destination_address")
             .toString("hex")
             .toUpperCase(),
