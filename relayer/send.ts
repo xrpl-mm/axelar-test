@@ -1,7 +1,7 @@
 import * as xrpl from "xrpl";
 import abi from "ethereumjs-abi";
-import { ethers } from "ethers";
 import fs from "fs";
+import { keccak256 } from "ethers/lib/utils";
 
 async function run() {
   // Can always get a new one from https://xrpl.org/resources/dev-tools/xrp-faucets
@@ -22,7 +22,7 @@ async function run() {
   const xrplWallet = xrpl.Wallet.fromSeed(SECRET);
 
   function createPayloadHash(payload: Buffer): string {
-    return ethers.keccak256(payload).slice(2);
+    return keccak256(payload).slice(2);
   }
 
   const payloadData = abi.rawEncode(
@@ -86,13 +86,6 @@ async function run() {
 
   console.log(txResponse)
 
-  // write
-  // tx_id: Array.from(new Uint8Array(Buffer.from(relayerRequest.userRequest.txId, "hex"))),
-  //           source_address: Array.from(new Uint8Array(Buffer.from(relayerRequest.userRequest.sourceAddress, "hex"))),
-  //           destination_chain: relayerRequest.userRequest.destinationChain,
-  //           destination_address: relayerRequest.userRequest.destinationAddress,
-  //           amount: { drops: Number(relayerRequest.userRequest.amount) },
-  //           payload_hash: relayerRequest.userRequest.payloadHash,
   const artifact = {
     tx_hash: txResponse.result.hash,
     source_address: xrplWallet.address,

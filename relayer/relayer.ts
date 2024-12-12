@@ -3,9 +3,14 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { decodeAccountID, encodeAccountID } from "xrpl";
+import { decodeAccountID, dropsToXrp, encodeAccountID } from "xrpl";
+import { ethers } from 'ethers';
 
 const KEYRING_DIR = `/Users/jm/Documents/Code/axelar-test/relayer/.axelar`
+const XRP_TOKEN_ID = `0xc2bb311dd03a93be4b74d3b4ab8612241c4dd1fd0232467c54a03b064f8583b6`;
+const EVM_SIDECHAIN = "xrpl-evm-sidechain"
+const XRPL = "xrpl"
+const AXELARNET_GATEWAY = `axelar1yvfcrdke7fasxfaxx2r706h7h85rnk3w68cc5f4fkmafz5j755ssl8h9p0`;
 
 /**
  * Converts an XRPL account to an EVM address.
@@ -27,6 +32,9 @@ export const evmAddressToXrplAccount = (address: string): string => {
     return encodeAccountID(accountId);
 };
 
+export const uint8ArrToHex = (arr: number[]): string => {
+    return arr.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 type Message = {
   tx_hash: string;
@@ -145,7 +153,7 @@ const prepareVerifyMessages = (message: Message) => {
   const user_message = {
     tx_id: tx_id,
     source_address: source_address,
-    destination_chain: "xrpl-evm-sidechain",
+    destination_chain: EVM_SIDECHAIN,
     destination_address: message.destination_address,
     amount: { drops: Number(message.amount) },
     payload_hash: message.payload_hash,
@@ -231,13 +239,88 @@ const routeMessage = async ({
   console.log("Routing completed.");
 };
 
+const executeItsHubMessage = async ({
+  user_message,
+  payloadHex,
+}: {
+  user_message: SerializedUserMessage;
+  payloadHex: string;
+}) => {
+  const interchainTransfer = {
+    messageType: ethers.BigNumber.from("0"),
+    // Only XRP transfer is supported for now
+    tokenId: XRP_TOKEN_ID,
+    sourceAddress: `0x${uint8ArrToHex(user_message.source_address)}`,
+    destinationAddress: `0x${user_message.destination_address}`,
+    amount: ethers.utils.parseUnits(dropsToXrp(user_message.amount.drops).toString()),
+    data: `0x${payloadHex}`,
+  };
+
+  console.log({ interchainTransfer: JSON.stringify(interchainTransfer, null, 2) } )
+
+  const abiCoder = new ethers.utils.AbiCoder();
+
+  const messageEncoded = abiCoder.encode(
+      ["uint256", "bytes32", "bytes", "bytes", "uint256", "bytes"],
+      [
+          interchainTransfer.messageType,
+          interchainTransfer.tokenId,
+          interchainTransfer.sourceAddress,
+          interchainTransfer.destinationAddress,
+          interchainTransfer.amount,
+          interchainTransfer.data,
+      ],
+  );
+
+  const hubMessage = abiCoder.encode(
+      ["uint256", "string", "bytes"],
+      [ethers.BigNumber.from("3"), EVM_SIDECHAIN, messageEncoded],
+  );
+
+  const txIdHex = uint8ArrToHex(user_message.tx_id)
+
+  const contractCall = {
+    execute: {
+        cc_id: {
+            source_chain: XRPL,
+            message_id: `0x${txIdHex.toLowerCase()}-0`,
+        },
+        payload: hubMessage.slice(2),
+    },
+  }
+
+  console.log({ contractCall: JSON.stringify(contractCall, null, 2) } )
+
+  while (true) {
+    try {
+      const output = execSync(
+        `axelard tx wasm execute ${AXELARNET_GATEWAY} '${JSON.stringify(contractCall)}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`, { env: {
+          ...process.env,
+          AXELARD_CHAIN_ID: `axelar-testnet-lisbon-3`,
+        } }).toString();
+
+        if (output.includes("wasm-contract_called")) {
+          console.log("ITS Hub message executed.")
+          break
+        } else {
+          console.log("Waiting for ITS Hub message to be executed...")
+        }
+    } catch (e) {
+      const error = e as Error;
+      console.log(`Error: ${error.message}. Waiting for ITS Hub message to be executed`)
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+}
+
 // CLI logic
 const main = () => {
   const argv = yargs(hideBin(process.argv))
     .scriptName('relayer')
     .usage('$0 <command> [options]')
     .command(
-      'verify-and-route-message <artifact>',
+      'xrpl-to-evm <artifact>',
       'Verify message from an artifact',
       (yargs) => {
         return yargs.positional('artifact', {
@@ -251,6 +334,7 @@ const main = () => {
           const message = readArtifact0(argv.artifact);
           const { payloadHex, user_message } = await verifyMessage(message);
           await routeMessage({ payloadHex, serializedUserMessage: user_message });
+          await executeItsHubMessage({ user_message, payloadHex });
         } catch (e) {
           const error = e as Error;
           console.error(error.message);
