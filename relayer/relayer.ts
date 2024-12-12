@@ -5,6 +5,8 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { decodeAccountID, encodeAccountID } from "xrpl";
 
+const KEYRING_DIR = `/Users/jm/Documents/Code/axelar-test/relayer/.axelar`
+
 /**
  * Converts an XRPL account to an EVM address.
  * @param account The XRPL account to convert.
@@ -32,10 +34,21 @@ type Message = {
   destination_address: string;
   amount: string;
   payload_hash: string;
+  payload: string;
 };
 
-// Read and parse the file content
-const readFileContent = (filePath: string): Message => {
+type SerializedUserMessage = {
+  tx_id: number[];
+  source_address: number[];
+  destination_chain: string;
+  destination_address: string;
+  amount: {
+      drops: number;
+  };
+  payload_hash: string;
+}
+
+const readArtifact0 = (filePath: string): Message => {
   try {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     const message = JSON.parse(fileContent);
@@ -45,7 +58,8 @@ const readFileContent = (filePath: string): Message => {
       !message.source_address ||
       !message.destination_address ||
       !message.amount ||
-      !message.payload_hash
+      !message.payload_hash ||
+      !message.payload
     ) {
       throw new Error('File content is missing required fields');
     }
@@ -58,7 +72,7 @@ const readFileContent = (filePath: string): Message => {
 };
 
 // Prepare the verify_messages JSON
-const prepareVerifyMessages = (message: Message): string => {
+const prepareVerifyMessages = (message: Message) => {
     const tx_id = Array.from(new Uint8Array(Buffer.from(message.tx_hash, "hex")))
     const sourceAddressHex = xrplAccountToEvmAddress(message.source_address).slice(2);
     const source_address = Array.from(new Uint8Array(Buffer.from(sourceAddressHex, "hex")))
@@ -128,31 +142,29 @@ const prepareVerifyMessages = (message: Message): string => {
     //       "payload_hash": "BA09F92F375483C1DD1425753053A187817F46B96AD6B1756E68347B7CD5B4E8"
     //     }
     //   }
-    
+  const user_message = {
+    tx_id: tx_id,
+    source_address: source_address,
+    destination_chain: "xrpl-evm-sidechain",
+    destination_address: message.destination_address,
+    amount: { drops: Number(message.amount) },
+    payload_hash: message.payload_hash,
+  }
   const verifyMessages = {
     verify_messages: [
       {
-        user_message: {
-          tx_id: tx_id,
-          source_address: source_address,
-          destination_chain: "xrpl-evm-sidechain",
-          destination_address: message.destination_address,
-          amount: { drops: Number(message.amount) },
-          payload_hash: message.payload_hash,
-        },
+        user_message,
       },
     ],
   };
-  return JSON.stringify(verifyMessages);
+  return { str: JSON.stringify(verifyMessages), user_message, payloadHex: message.payload };
 };
 
 // Execute axelard command
-const executeAxelardCommand = async (message: Message) => {
-  const verifyMessagesJson = prepareVerifyMessages(message);
+const verifyMessage = async (message: Message) => {
+  const { str: verifyMessagesJson, user_message, payloadHex } = prepareVerifyMessages(message);
 
-  const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${verifyMessagesJson}' --keyring-backend test --from wallet --keyring-dir /Users/jm/Documents/Code/axelar-test/relayer/.axelar/ --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
-
-  console.log(command)
+  const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${verifyMessagesJson}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
 
   while (true) {
     try {
@@ -173,6 +185,50 @@ const executeAxelardCommand = async (message: Message) => {
     }
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
+
+  return { user_message, payloadHex };
+};
+
+const routeMessage = async ({
+  // without 0x
+  payloadHex,
+  serializedUserMessage,
+}: { payloadHex: string; serializedUserMessage: SerializedUserMessage }) => {
+  const routeMessageCall = {
+    route_incoming_messages: [
+        {
+            payload: payloadHex,
+            message: {
+                user_message: serializedUserMessage,
+            },
+        },
+    ],
+  };
+
+  const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${JSON.stringify(routeMessageCall)}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
+
+  while (true) {
+    try {
+      console.log('Executing command:', command);
+      const output = execSync(command, { env: {
+        ...process.env,
+        AXELARD_CHAIN_ID: `axelar-testnet-lisbon-3`,
+      } }).toString()
+
+      if (output.includes("wasm-message_routed")) {
+        console.log("Verification completed.")
+        break
+      } else {
+        console.log("Waiting for routing to complete...")
+      }
+    } catch (e) {
+      const error = e as Error;
+      console.log(`Error: ${error.message}. Waiting for routing to complete...`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  console.log("Routing completed.");
 };
 
 // CLI logic
@@ -181,8 +237,8 @@ const main = () => {
     .scriptName('relayer')
     .usage('$0 <command> [options]')
     .command(
-      'verify-messages <artifact>',
-      'Verify the integrity of messages from a artifact and execute a command',
+      'verify-and-route-message <artifact>',
+      'Verify message from an artifact',
       (yargs) => {
         return yargs.positional('artifact', {
           describe: 'Path to the file containing messages',
@@ -190,10 +246,11 @@ const main = () => {
           demandOption: true,
         });
       },
-      (argv) => {
+      async (argv) => {
         try {
-          const message = readFileContent(argv.artifact);
-          executeAxelardCommand(message);
+          const message = readArtifact0(argv.artifact);
+          const { payloadHex, user_message } = await verifyMessage(message);
+          await routeMessage({ payloadHex, serializedUserMessage: user_message });
         } catch (e) {
           const error = e as Error;
           console.error(error.message);

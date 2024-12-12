@@ -100,6 +100,7 @@ async function run() {
     destination_address: DESTINATION,
     amount: AMOUNT,
     payload_hash: createPayloadHash(payloadData),
+    payload: payloadData.toString("hex"),
   }  
 
   fs.rmSync("artifact.json", { force: true });
