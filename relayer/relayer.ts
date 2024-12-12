@@ -147,23 +147,31 @@ const prepareVerifyMessages = (message: Message): string => {
 };
 
 // Execute axelard command
-const executeAxelardCommand = (message: Message): void => {
+const executeAxelardCommand = async (message: Message) => {
   const verifyMessagesJson = prepareVerifyMessages(message);
 
   const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${verifyMessagesJson}' --keyring-backend test --from wallet --keyring-dir /Users/jm/Documents/Code/axelar-test/relayer/.axelar/ --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
 
   console.log(command)
 
-  try {
-    console.log('Executing command:', command);
-    const result = execSync(command, { stdio: 'inherit', env: {
-      ...process.env,
-      AXELARD_CHAIN_ID: `axelar-testnet-lisbon-3`,
-    } });
-    console.log('Command executed successfully:', result.toString());
-  } catch (e) {
-    const error = e as Error;
-    console.error('Error executing command:', error.message);
+  while (true) {
+    try {
+      console.log('Executing command:', command);
+      const output = execSync(command, { env: {
+        ...process.env,
+        AXELARD_CHAIN_ID: `axelar-testnet-lisbon-3`,
+      } }).toString()
+      if (output.includes("wasm-already_verified")) {
+        console.log("Verification completed.")
+        break
+      } else {
+        console.log("Waiting for verification to complete...")
+      }
+    } catch (e) {
+      const error = e as Error;
+      console.log(`Error: ${error.message}. Waiting for verification to complete...`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 };
 
