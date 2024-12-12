@@ -1,0 +1,8 @@
+{
+  "tx_hash": "1F9934B8B527E5350EEE0E2C7DBB5E61CF3DAF10F5D2384FA92AAAC884B5B71B",
+  "source_address": "rwBkJRx6z3ETyrDsJtTgnis3YA61cVaUxh",
+  "destination_chain": "xrpl-evm-sidechain",
+  "destination_address": "7b1bf875977e4124dc781153bd6393c8e1c22739",
+  "amount": "2050000",
+  "payload_hash": "d83f3a415bfa01e1398c8bffb0f7b1bae50fa084c7486ada9224340c439f2cf9"
+}

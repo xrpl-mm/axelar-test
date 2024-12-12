@@ -17,5 +17,9 @@
     "ethereumjs-abi": "^0.6.8",
     "ethers": "^6.13.4",
     "xrpl": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.33",
+    "yargs": "^17.7.2"
   }
 }
