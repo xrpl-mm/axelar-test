@@ -18,7 +18,6 @@ if (!EVM_SIDECHAIN_PRIVATE_KEY) {
   throw new Error("EVM_SIDECHAIN_PRIVATE_KEY is not set");
 }
 
-
 const KEYRING_DIR = `/Users/jm/Documents/Code/axelar-test/relayer/.axelar`;
 const XRP_TOKEN_ID = `0xc2bb311dd03a93be4b74d3b4ab8612241c4dd1fd0232467c54a03b064f8583b6`;
 const EVM_SIDECHAIN = "xrpl-evm-sidechain";
@@ -382,6 +381,7 @@ const routeMessage = async ({
         console.log("Verification completed.");
         break;
       } else {
+        console.log(`output: ${output}`);
         console.log("Waiting for routing to complete...");
       }
     } catch (e) {
@@ -743,7 +743,7 @@ const executeITSTransfer = async ({
       sourceAddress,
       payload,
       {
-        gasLimit: 21000000,
+        gasLimit: ITS_GAS_LIMIT,
       },
   );
   const result = await tx.wait();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.21;
 
 import {InterchainTokenExecutable} from "interchain-token-service/executable/InterchainTokenExecutable.sol";
 import {InterchainTokenService} from "interchain-token-service/InterchainTokenService.sol";
