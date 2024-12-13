@@ -47,16 +47,16 @@ contract SimpleStuff is InterchainTokenExecutable {
         (bytes memory destinationAddress, string memory message) = abi.decode(data, (bytes, string));
 
         emit DecodedData(destinationAddress, message);
-        bytes memory num = abi.encodePacked(uint16(0x1234));
-        bytes memory replyData = abi.encodePacked(num, "reply");
+        // bytes memory num = abi.encodePacked(uint16(0x1234));
+        // bytes memory replyData = abi.encodePacked(num, "reply");
 
-        InterchainTokenService(interchainTokenService).callContractWithInterchainToken(
-            tokenId,
-            DESTINATION_CHAIN,
-            destinationAddress,
-            amount / 2, // uint256 amount,
-            replyData, // bytes memory data,
-            0 // uint256 gasValue
-        );
+        // InterchainTokenService(interchainTokenService).callContractWithInterchainToken(
+        //     tokenId,
+        //     DESTINATION_CHAIN,
+        //     destinationAddress,
+        //     amount / 2, // uint256 amount,
+        //     replyData, // bytes memory data,
+        //     0 // uint256 gasValue
+        // );
     }
 }

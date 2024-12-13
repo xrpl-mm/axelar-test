@@ -710,9 +710,9 @@ const sendExecuteDataToGateway = async ({
     data: `0x${executeData}`,
     value: "0",
   });
-  await tx.wait();
+  const result = await tx.wait();
 
-  console.log(`Sent execute data to gateway: ${gatewayAddress}.`);
+  console.log(`Sent execute data to gateway: ${gatewayAddress}. Transaction hash: ${result.transactionHash}`);
 }
 
 const executeITSTransfer = async ({
@@ -730,17 +730,24 @@ const executeITSTransfer = async ({
   const commandId = id(`${sourceChain}_${messageId}`);
   const interchainTokenService = 
     new Contract(EVM_SIDECHAIN_INTERCHAIN_TOKEN_SERVICE_ADDRESS, IAxelarExecutable.abi, evmSidechainWallet);
+  console.log({
+    commandId,
+    sourceChain,
+    messageId,
+    sourceAddress,
+    payload,
+  })
   const tx = await interchainTokenService.execute(
       commandId,
       AXELARNET,
       sourceAddress,
       payload,
       {
-        gasLimit: ITS_GAS_LIMIT,
+        gasLimit: 21000000,
       },
   );
-  await tx.wait();
-  console.log(`Executed ITS transfer on interchain token service.`);
+  const result = await tx.wait();
+  console.log(`Executed ITS transfer on interchain token service. Transaction hash: ${result.transactionHash}`);
 }
 
 // CLI logic

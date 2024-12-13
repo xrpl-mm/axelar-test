@@ -9,6 +9,7 @@ async function run() {
   const DESTINATION_CHAIN = "xrpl-evm-sidechain";
   // https://explorer.xrplevm.org/address/0x7b1bf875977e4124dc781153bd6393c8e1c22739
   const DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE = `7b1bf875977e4124dc781153bd6393c8e1c22739`;
+  const DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE_WITHOUT_REPLY = `6d5E489d2BbA36b99A4cBF0dEECffF0e6517De7D`;
   // https://explorer.xrplevm.org/address/0x2bd071fce9eb7f51333b002ea4adcbe61d9322a9
   const DESTINATION_EVM_ADDRESS_AXELAR_EXECUTABLE = `2bd071fce9eb7f51333b002ea4adcbe61d9322a9`;
   // https://explorer.xrplevm.org/address/0xc98869883ef7144d4cc84b3cc4b403cccd781a63
@@ -17,7 +18,7 @@ async function run() {
   const AMOUNT = xrpl.xrpToDrops("2.05");
   const RPC_URL = "wss://s.devnet.rippletest.net:51233";
 
-  const DESTINATION = DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE;
+  const DESTINATION = DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE_WITHOUT_REPLY;
 
   const xrplWallet = xrpl.Wallet.fromSeed(SECRET);
 
