@@ -5,7 +5,7 @@ import { keccak256 } from "ethers/lib/utils";
 
 async function run() {
   // Can always get a new one from https://xrpl.org/resources/dev-tools/xrp-faucets
-  const SECRET = `sEdTveex2CSSp8WTLfo1MCg79kSuLrt`;
+  const SECRET = `sEd7bNqUNqBF1Mh3Vs1hgbk5hr7Ciis`;
   const DESTINATION_CHAIN = "xrpl-evm-sidechain";
   // https://explorer.xrplevm.org/address/0x7b1bf875977e4124dc781153bd6393c8e1c22739
   const DESTINATION_EVM_ADDRESS_INTERCHAIN_TOKEN_EXECUTABLE = `7b1bf875977e4124dc781153bd6393c8e1c22739`;
@@ -27,7 +27,7 @@ async function run() {
 
   const payloadData = abi.rawEncode(
     ["bytes", "string"],
-    ["0x1211", "asdfasdfswea"]
+    ["0x1212", "asdfasdfswea"]
   );
 
   console.log(createPayloadHash(payloadData));

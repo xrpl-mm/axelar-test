@@ -4,7 +4,20 @@ import { hideBin } from "yargs/helpers";
 import fs from "fs";
 import { execSync } from "child_process";
 import { decodeAccountID, dropsToXrp, encodeAccountID } from "xrpl";
-import { ethers } from "ethers";
+import { Contract, ethers, providers, Wallet } from "ethers";
+import IAxelarExecutable from "./IAxelarExecutable.json";
+import { id } from "ethers/lib/utils";
+
+// dotenv
+require("dotenv").config();
+
+// Without prefix 0x
+const EVM_SIDECHAIN_PRIVATE_KEY = process.env.EVM_SIDECHAIN_PRIVATE_KEY;
+
+if (!EVM_SIDECHAIN_PRIVATE_KEY) {
+  throw new Error("EVM_SIDECHAIN_PRIVATE_KEY is not set");
+}
+
 
 const KEYRING_DIR = `/Users/jm/Documents/Code/axelar-test/relayer/.axelar`;
 const XRP_TOKEN_ID = `0xc2bb311dd03a93be4b74d3b4ab8612241c4dd1fd0232467c54a03b064f8583b6`;
@@ -13,8 +26,15 @@ const XRPL = "xrpl";
 const AXELARNET = "axelarnet";
 const AXELARNET_GATEWAY = `axelar1yvfcrdke7fasxfaxx2r706h7h85rnk3w68cc5f4fkmafz5j755ssl8h9p0`;
 const INTERCHAIN_TOKEN_SERVICE = `axelar10jzzmv5m7da7dn2xsfac0yqe7zamy34uedx3e28laq0p6f3f8dzqp649fp`;
+const XRPL_GATEWAY = `axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3`;
 const XRPL_AXELAR_GATEWAY = `rP9iHnCmJcVPtzCwYJjU1fryC2pEcVqDHv`;
 const EVM_SIDECHAIN_MULTISIG_PROVER = `axelar19pu8hfnwgc0vjhadmvmgz3w4d2g7d7qlg6jjky9y2mf8ea4vf4usj6ramg`;
+const EVM_SIDECHAIN_GATEWAY_ADDRESS = `0x48CF6E93C4C1b014F719Db2aeF049AA86A255fE2`;
+const EVM_SIDECHAIN_INTERCHAIN_TOKEN_SERVICE_ADDRESS = `0x43F2ccD4E27099b5F580895b44eAcC866e5F7Bb1`;
+const EVM_SIDECHAIN_RPC = `https://rpc.xrplevm.org`;
+const evmSideChainProvider = new providers.JsonRpcProvider(EVM_SIDECHAIN_RPC);
+const evmSidechainWallet = new Wallet(`0x${EVM_SIDECHAIN_PRIVATE_KEY}`, evmSideChainProvider);
+const ITS_GAS_LIMIT = 8000000;
 
 /**
  * Converts an XRPL account to an EVM address.
@@ -91,6 +111,17 @@ type AxelarExecuteCommandOutput = {
   }[]
 }
 
+type GetProofSuccessOutput = {
+  data: {
+    status: {
+      completed: {
+        // hex string without preceding 0x
+        execute_data: string
+      }
+    }
+  }
+}
+
 function isRouteITSMessageOutput(output: any): output is RouteITSHubMessageOutput {
   return output.txhash !== undefined && output.code !== undefined &&
     typeof output.txhash === "string" && typeof output.code === "number"
@@ -99,6 +130,10 @@ function isRouteITSMessageOutput(output: any): output is RouteITSHubMessageOutpu
 
 function isAxelarExecuteCommandOutput(output: any): output is AxelarExecuteCommandOutput {
   return output.logs !== undefined && Array.isArray(output.logs)
+}
+
+function isGetProofSuccessOutput(output: any): output is GetProofSuccessOutput {
+  return output.data !== undefined && output.data.status !== undefined && output.data.status.completed !== undefined && output.data.status.completed.execute_data !== undefined && typeof output.data.status.completed.execute_data === "string"
 }
 
 function unfurlEvent(event: LoggedEvent): UnfurledEvent {
@@ -276,7 +311,7 @@ const verifyMessage = async (message: Message) => {
     payloadHex,
   } = prepareVerifyMessages(message);
 
-  const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${verifyMessagesJson}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
+  const command = `axelard tx wasm execute ${XRPL_GATEWAY} '${verifyMessagesJson}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
 
   while (true) {
     try {
@@ -287,9 +322,14 @@ const verifyMessage = async (message: Message) => {
           AXELARD_CHAIN_ID: `axelar-testnet-lisbon-3`,
         },
       }).toString();
+
+      console.log({ output });
+
       if (output.includes("wasm-already_verified")) {
         console.log("Verification completed.");
         break;
+      } else if (output.includes("wasm-already_rejected")) {
+        throw new Error("Verification rejected.");
       } else {
         console.log("Waiting for verification to complete...");
       }
@@ -324,7 +364,7 @@ const routeMessage = async ({
     ],
   };
 
-  const command = `axelard tx wasm execute axelar13w698a6pjytxj6jzprs6pznaxhan3flhf76fr0nc7jg3udcsa07q9c7da3 '${JSON.stringify(
+  const command = `axelard tx wasm execute ${XRPL_GATEWAY} '${JSON.stringify(
     routeMessageCall
   )}' --keyring-backend test --from wallet --keyring-dir ${KEYRING_DIR} --gas 20000000 --gas-adjustment 1.5 --gas-prices 0.00005uamplifier --chain-id devnet-amplifier --node http://devnet-amplifier.axelar.dev:26657`;
 
@@ -601,7 +641,8 @@ const constructTransferProof = async ({
 
   console.log(`Multisig session ID: ${multisigSessionId}`)
 
-  return { multisigSessionId }
+  // The string is wrapped in quotes
+  return { multisigSessionId: JSON.parse(multisigSessionId) }
 };
 
 const getProof = async ({
@@ -630,23 +671,76 @@ const getProof = async ({
       ).toString();
 
       console.log({ output: JSON.stringify(output, null, 2) });
-      // const parsed = JSON.parse(output);
 
-      // if (output.includes("complted")) {
-      //   break;
-      // } else {
-      //   console.log("Waiting for transfer proof to be constructed...");
-      // }
+      const parsed = JSON.parse(output);
+
+      if (isGetProofSuccessOutput(parsed)) {
+        console.log(`Proof constructed. Execute data: ${parsed.data.status.completed.execute_data}`);
+
+        return {
+          executeData: parsed.data.status.completed.execute_data
+        }
+      } else {
+        console.log("Waiting for getProof call...");
+      }
     } catch (e) {
       const error = e as Error;
       console.log(
-        `Error: ${error.message}. Waiting for the proof...`
+        `Error: ${error.message}. Waiting for getProof call...`
       );
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
+}
 
+const sendExecuteDataToGateway = async ({
+  gatewayAddress,
+  executeData,
+}: {
+  gatewayAddress: string;
+  executeData: string;
+}) => {
+
+  console.log(`Sending execute data to gateway: ${gatewayAddress}...`);
+
+  const tx = await evmSidechainWallet.sendTransaction({
+    from: evmSidechainWallet.address,
+    to: gatewayAddress,
+    data: `0x${executeData}`,
+    value: "0",
+  });
+  await tx.wait();
+
+  console.log(`Sent execute data to gateway: ${gatewayAddress}.`);
+}
+
+const executeITSTransfer = async ({
+  sourceChain,
+  messageId,
+  sourceAddress,
+  payload,
+}: {
+  sourceChain: string
+  messageId: string
+  sourceAddress: string
+  payload: string
+}) => {
+  console.log(`Executing ITS transfer on interchain token service...`);
+  const commandId = id(`${sourceChain}_${messageId}`);
+  const interchainTokenService = 
+    new Contract(EVM_SIDECHAIN_INTERCHAIN_TOKEN_SERVICE_ADDRESS, IAxelarExecutable.abi, evmSidechainWallet);
+  const tx = await interchainTokenService.execute(
+      commandId,
+      AXELARNET,
+      sourceAddress,
+      payload,
+      {
+        gasLimit: ITS_GAS_LIMIT,
+      },
+  );
+  await tx.wait();
+  console.log(`Executed ITS transfer on interchain token service.`);
 }
 
 // CLI logic
@@ -681,7 +775,23 @@ const main = () => {
             payloadHash: user_message.payload_hash,
           });
           const { multisigSessionId } = await constructTransferProof({ messageId: loggedEvent.messageId });
-          await getProof({ multisigSessionId });
+          const { executeData } = await getProof({ multisigSessionId });
+          await sendExecuteDataToGateway({
+            gatewayAddress: EVM_SIDECHAIN_GATEWAY_ADDRESS,
+            executeData,
+          });
+          await executeITSTransfer({
+            // This will be "axelarnet" when relaying from xrpl to evm
+            // Unsure about the other direction
+            sourceChain: loggedEvent.sourceChain,
+            // Sth like 0x0000000000000000000000000000000000000000000000000000000000458cae-531
+            messageId: loggedEvent.messageId,
+            // This will be INTERCHAIN_TOKEN_SERVICE when relaying from xrpl to evm
+            sourceAddress: loggedEvent.sourceAddress,
+            // Hex string without 0x
+            payload: `0x${loggedEvent.payload}`,
+          });
+          console.log("✅ Relay completed.");
         } catch (e) {
           const error = e as Error;
           console.error(error.message);
