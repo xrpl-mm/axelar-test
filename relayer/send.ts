@@ -1,7 +1,7 @@
 import * as xrpl from "xrpl";
 import abi from "ethereumjs-abi";
 import fs from "fs";
-import { keccak256 } from "ethers/lib/utils";
+import { arrayify, keccak256 } from "ethers/lib/utils";
 
 async function run() {
   // Can always get a new one from https://xrpl.org/resources/dev-tools/xrp-faucets
@@ -29,15 +29,10 @@ async function run() {
 
   const payloadData = abi.rawEncode(
     ["bytes", "string"],
-    ["0x1212", "asdfasdfswea"]
+    [arrayify("0x1212"), "asdfasdfswea"]
   );
 
-  console.log(createPayloadHash(payloadData));
-
-  // const wrappedPayloadData = abi.rawEncode(
-  //   ["string", "uint256", "bytes"],
-  //   ["uxrp", AMOUNT, payloadData],
-  // )
+  console.log(`payload data: ${payloadData.toString("hex")}`);
 
   const paymentTx: xrpl.Payment = {
     TransactionType: "Payment",
