@@ -27,12 +27,10 @@ async function run() {
 
   const payloadData = abi.rawEncode(
     ["bytes", "string"],
-    ["0x1211", "asdfasdfswea"],
+    ["0x1211", "asdfasdfswea"]
   );
 
-  console.log(createPayloadHash(
-    payloadData,
-  ));
+  console.log(createPayloadHash(payloadData));
 
   // const wrappedPayloadData = abi.rawEncode(
   //   ["string", "uint256", "bytes"],
@@ -58,7 +56,9 @@ async function run() {
       },
       {
         Memo: {
-          MemoData: Buffer.from(DESTINATION_CHAIN).toString("hex").toUpperCase(),
+          MemoData: Buffer.from(DESTINATION_CHAIN)
+            .toString("hex")
+            .toUpperCase(),
           MemoType: Buffer.from("destination_chain")
             .toString("hex")
             .toUpperCase(),
@@ -66,9 +66,7 @@ async function run() {
       },
       {
         Memo: {
-          MemoData: createPayloadHash(
-            payloadData,
-          ),
+          MemoData: createPayloadHash(payloadData),
           MemoType: Buffer.from("payload_hash").toString("hex").toUpperCase(),
         },
       },
@@ -84,7 +82,7 @@ async function run() {
     wallet: xrplWallet,
   });
 
-  console.log(txResponse)
+  console.log(txResponse);
 
   const artifact = {
     tx_hash: txResponse.result.hash,
@@ -94,10 +92,10 @@ async function run() {
     amount: AMOUNT,
     payload_hash: createPayloadHash(payloadData),
     payload: payloadData.toString("hex"),
-  }  
+  };
 
   fs.rmSync("artifact.json", { force: true });
-  fs.writeFileSync("artifact.json", JSON.stringify(artifact, null, 2), { 
+  fs.writeFileSync("artifact.json", JSON.stringify(artifact, null, 2), {
     encoding: "utf-8",
   });
 
